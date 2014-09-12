@@ -6,6 +6,7 @@
 //! and layout tasks.
 
 use dom::bindings::codegen::InheritTypes::{EventTargetCast, NodeCast, EventCast};
+use dom::bindings::conversions::{FromJSValConvertible, Empty};
 use dom::bindings::global::Window;
 use dom::bindings::js::{JS, JSRef, RootCollection, Temporary, OptionalSettable};
 use dom::bindings::js::OptionalRootable;
@@ -635,21 +636,23 @@ impl ScriptTask {
 
         self.compositor.set_ready_state(pipeline_id, Loading);
 
-        let html_parsing_result = if is_javascript {
-            // FIXME: evaluate the JS url and use that as the input HTML
-            hubbub_html_parser::parse_html(&*page,
-                                           &*document,
-                                           InputString(String::from_str("<html></html>")),
-                                           self.resource_task.clone())
+        let parser_input = if !is_javascript {
+            InputUrl(url.clone())
         } else {
-            // Parse HTML.
-            //
-            // Note: We can parse the next document in parallel with any previous documents.
+            let evalstr = url.non_relative_scheme_data().unwrap();
+            let jsval = window.evaluate_js_with_result(evalstr);
+            let strval = FromJSValConvertible::from_jsval(self.get_cx(), jsval, Empty);
+            InputString(strval.unwrap_or("".to_string()))
+        };
+
+        // Parse HTML.
+        //
+        // Note: We can parse the next document in parallel with any previous documents.
+        let html_parsing_result =
             hubbub_html_parser::parse_html(&*page,
                                            &*document,
-                                           InputUrl(url.clone()),
-                                           self.resource_task.clone())
-        };
+                                           parser_input,
+                                           self.resource_task.clone());
 
         let HtmlParserResult {
             discovery_port
