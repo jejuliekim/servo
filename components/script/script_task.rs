@@ -606,6 +606,10 @@ impl ScriptTask {
         }
 
         let is_javascript = url.scheme.as_slice() == "javascript";
+        let last_url = match last_loaded_url {
+            Some((ref loaded, _)) => Some(loaded.clone()),
+            None => None,
+        };
 
         let cx = self.js_context.borrow();
         let cx = cx.get_ref();
@@ -616,14 +620,23 @@ impl ScriptTask {
                                  self.control_chan.clone(),
                                  self.compositor.dup(),
                                  self.image_cache_task.clone()).root();
-        let document = Document::new(&*window, Some(url.clone()), HTMLDocument, None).root();
+        let document = if is_javascript {
+            let doc_url = match last_url {
+                Some(url) => Some(url.clone()),
+                None => Url::parse("about:blank").ok(),
+            };
+            *page.mut_url() = Some((doc_url.get_ref().clone(), true));
+            Document::new(&*window, doc_url, HTMLDocument, None).root()
+        } else {
+            Document::new(&*window, Some(url.clone()), HTMLDocument, None).root()
+        };
+
         window.deref().init_browser_context(&*document);
 
         self.compositor.set_ready_state(pipeline_id, Loading);
 
         let html_parsing_result = if is_javascript {
             // FIXME: evaluate the JS url and use that as the input HTML
-            *page.mut_url() = Some((url.clone(), true));
             hubbub_html_parser::parse_html(&*page,
                                            &*document,
                                            InputString(String::from_str("<html></html>")),
