@@ -6,7 +6,6 @@ use dom::bindings::codegen::Bindings::EventHandlerBinding::{OnErrorEventHandlerN
 use dom::bindings::codegen::Bindings::WindowBinding;
 use dom::bindings::codegen::Bindings::WindowBinding::WindowMethods;
 use dom::bindings::codegen::InheritTypes::EventTargetCast;
-use dom::bindings::conversions::{Empty, FromJSValConvertible};
 use dom::bindings::error::{Fallible, InvalidCharacter};
 use dom::bindings::global;
 use dom::bindings::js::{JS, JSRef, Temporary, OptionalSettable};
