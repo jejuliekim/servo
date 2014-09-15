@@ -607,10 +607,7 @@ impl ScriptTask {
         }
 
         let is_javascript = url.scheme.as_slice() == "javascript";
-        let last_url = match last_loaded_url {
-            Some((ref loaded, _)) => Some(loaded.clone()),
-            None => None,
-        };
+        let last_url = last_loaded_url.map(|(ref loaded, _)| loaded.clone());
 
         let cx = self.js_context.borrow();
         let cx = cx.get_ref();
@@ -621,16 +618,17 @@ impl ScriptTask {
                                  self.control_chan.clone(),
                                  self.compositor.dup(),
                                  self.image_cache_task.clone()).root();
-        let document = if is_javascript {
+        let doc_url = if is_javascript {
             let doc_url = match last_url {
                 Some(url) => Some(url.clone()),
                 None => Url::parse("about:blank").ok(),
             };
             *page.mut_url() = Some((doc_url.get_ref().clone(), true));
-            Document::new(&*window, doc_url, HTMLDocument, None).root()
+            doc_url
         } else {
-            Document::new(&*window, Some(url.clone()), HTMLDocument, None).root()
+            Some(url.clone())
         };
+        Document::new(&*window, doc_url, HTMLDocument, None).root();
 
         window.deref().init_browser_context(&*document);
 
@@ -708,12 +706,13 @@ impl ScriptTask {
             // Evaluate every script in the document.
             for file in js_scripts.iter() {
                 let global_obj = window.reflector().get_jsobject();
-                //FIXME: this should have some kind of error handling, or explicitly
-                //       drop an exception on the floor.
                 let filename = match file.url {
                     None => String::new(),
                     Some(ref url) => url.serialize(),
                 };
+
+                //FIXME: this should have some kind of error handling, or explicitly
+                //       drop an exception on the floor.
                 match cx.evaluate_script(global_obj, file.data.clone(), filename, 1) {
                     Ok(_) => (),
                     Err(_) => println!("evaluate_script failed")

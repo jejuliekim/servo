@@ -363,8 +363,8 @@ pub fn parse_html(page: &Page,
 
             load_response.metadata.headers.as_ref().map(|headers| {
                 let header = headers.iter().find(|h|
-                                                 h.header_name().as_slice().to_ascii_lower() == "last-modified".to_string()
-                                                 );
+                    h.header_name().as_slice().to_ascii_lower() == "last-modified".to_string()
+                );
 
                 match header {
                     Some(h) => document.set_last_modified(
