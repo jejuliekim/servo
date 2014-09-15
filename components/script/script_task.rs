@@ -628,7 +628,7 @@ impl ScriptTask {
         } else {
             Some(url.clone())
         };
-        Document::new(&*window, doc_url, HTMLDocument, None).root();
+        let document = Document::new(&*window, doc_url, HTMLDocument, None).root();
 
         window.deref().init_browser_context(&*document);
 
